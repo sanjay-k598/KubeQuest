@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KubeOps Commander • Learn kubectl by fixing real incidents</title>
+  <meta name="description" content="Hands-on Kubernetes troubleshooting simulator. Practice kubectl in a safe, game-like sandbox." />
+  <link rel="icon" href="assets/icons/k8s.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { backdrop:'#0b1020', panel:'#121a2a', accent:'#6c7bff', accent2:'#9b8cff', ok:'#22c55e', warn:'#f59e0b', err:'#ef4444' }, boxShadow:{ glow:'0 0 30px rgba(108,123,255,0.25)', glow2:'0 0 40px rgba(155,140,255,0.18)' } } } };
+  </script>
+  <style>
+    body { background: radial-gradient(1000px 600px at 50% -10%, rgba(108,123,255,.15), transparent), radial-gradient(800px 800px at 80% 20%, rgba(155,140,255,.10), transparent), #0b1020; }
+    .glass { background: rgba(18,26,42,.75); backdrop-filter: blur(6px); }
+    .terminal { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .prompt::before { content: "$ "; color: #9CA3AF; }
+    .blink { animation: blink 1s steps(2, start) infinite; } @keyframes blink { to { visibility: hidden; } }
+    .badge { border: 1px solid rgba(255,255,255,.08); }
+  </style>
+</head>
+<body class="text-gray-200 min-h-screen">
+  <header class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <img src="assets/icons/k8s.svg" class="w-7 h-7" alt="Kubernetes">
+      <h1 class="text-lg font-semibold tracking-wide">KubeOps Commander</h1>
+      <span class="text-xs ml-3 px-2 py-0.5 rounded-full bg-panel/60 border border-white/10">Missions</span>
+    </div>
+    <nav class="text-sm flex gap-6">
+      <a class="hover:text-white/90" href="#docs">Docs</a>
+      <a class="hover:text-white/90" href="#scores">Scores</a>
+      <a class="rounded px-3 py-1.5 bg-indigo-500/20 border border-indigo-400/30 hover:bg-indigo-500/30" href="https://github.com/sanjay-k598" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="max-w-4xl mx-auto px-6 text-center mt-6">
+    <p class="uppercase tracking-[0.35em] text-xs text-white/60">LEARN • DEBUG • MASTER</p>
+    <h2 class="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+      Fix real <span class="text-accent">Kubernetes</span> incidents using <span class="text-accent2">kubectl</span>.
+    </h2>
+    <p class="mt-4 text-white/70">
+      Type real commands, read realistic outputs, repair broken clusters, and earn points for speed and safety.
+    </p>
+  </section>
+
+  <main class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-6 mt-10">
+    <section class="glass rounded-2xl border border-white/10 shadow-glow shadow-glow2 p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Terminal</h3>
+        <div class="text-xs text-white/60">Mission: <span id="missionTitle">—</span></div>
+      </div>
+      <div id="terminalOut" class="terminal h-[420px] overflow-auto bg-black/40 rounded-lg p-3 border border-white/10"></div>
+      <div class="terminal mt-2 flex items-center gap-2">
+        <span class="text-indigo-300">$</span>
+        <input id="cmd" class="w-full bg-black/40 border border-white/10 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="type kubectl commands… e.g., kubectl get pods -o wide" autocomplete="off">
+        <button id="runBtn" class="px-3 py-2 text-sm rounded bg-indigo-500/20 border border-indigo-400/30 hover:bg-indigo-500/30">Run</button>
+      </div>
+      <div class="text-xs text-white/60 mt-2">Shortcuts: ↑ history, Ctrl+L clear, <span class="px-1 rounded bg-white/10">help</span> list.</div>
+    </section>
+
+    <aside class="glass rounded-2xl border border-white/10 shadow-glow p-4">
+      <h3 class="font-semibold mb-3">Cluster HUD</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+          <div class="text-xs uppercase tracking-wide text-white/60 mb-2">Workloads</div>
+          <div id="workloads" class="space-y-2"></div>
+        </div>
+        <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+          <div class="text-xs uppercase tracking-wide text-white/60 mb-2">Networking</div>
+          <div id="network" class="space-y-2"></div>
+        </div>
+        <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+          <div class="text-xs uppercase tracking-wide text-white/60 mb-2">Nodes</div>
+          <div id="nodes" class="space-y-2"></div>
+        </div>
+        <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+          <div class="text-xs uppercase tracking-wide text-white/60 mb-2">Score</div>
+          <div id="scoreBox" class="text-sm">
+            <div>SLO: <span id="slo">—</span></div>
+            <div>Time: <span id="time">0s</span></div>
+            <div>Score: <span id="score">0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button id="hintBtn" class="px-3 py-1.5 text-sm rounded border border-white/10 hover:bg:white/10">Hint</button>
+        <button id="resetBtn" class="px-3 py-1.5 text-sm rounded border border-white/10 hover:bg:white/10">Reset</button>
+        <select id="missionSelect" class="ml-auto bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm"></select>
+      </div>
+      <div id="hint" class="text-xs text-white/70 mt-2"></div>
+    </aside>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-6 mt-10 pb-12 text-xs text-white/60">
+    © 2025 KubeOps Commander • No cluster required • Built with HTML + Tailwind + Vanilla JS • Deployed via GitHub Pages
+  </footer>
+
+  <script src="js/missions.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
